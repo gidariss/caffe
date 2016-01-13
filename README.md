@@ -1,6 +1,9 @@
 # Caffe for the LocNet object localization network
 
-Caffe fork that supports the LocNet object localization network that is presented on arxiv paper http://arxiv.org/abs/1511.07763. It was forked from https://github.com/BVLC/caffe on January 13th, 2016. 
+Caffe fork that supports the LocNet object localization network that is presented on the arxiv paper:  
+Title: LocNet: Improving Localization Accuracy for Object Detection
+Link: http://arxiv.org/abs/1511.07763    
+It was forked from https://github.com/BVLC/caffe on January 13th, 2016. 
 
 [![Build Status](https://travis-ci.org/BVLC/caffe.svg?branch=master)](https://travis-ci.org/BVLC/caffe)
 [![License](https://img.shields.io/badge/license-BSD-blue.svg)](LICENSE)
