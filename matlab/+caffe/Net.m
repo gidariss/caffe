@@ -11,6 +11,8 @@ classdef Net < handle
     %     output_blob_indices
     %     layer_names
     %     blob_names
+    %     bottom_id_vecs
+    %     top_id_vecs
   end
   properties (SetAccess = private)
     layer_vec
@@ -21,6 +23,8 @@ classdef Net < handle
     name2blob_index
     layer_names
     blob_names
+    bottom_id_vecs_per_layer
+    top_id_vecs_per_layer
   end
   
   methods
@@ -67,6 +71,10 @@ classdef Net < handle
       % expose layer_names and blob_names for public read access
       self.layer_names = self.attributes.layer_names;
       self.blob_names = self.attributes.blob_names;
+
+      % expose the bottom and top blob ids of each layer
+      self.bottom_id_vecs_per_layer = self.attributes.bottom_id_vecs;
+      self.top_id_vecs_per_layer = self.attributes.top_id_vecs;
     end
     function layer = layers(self, layer_name)
       CHECK(ischar(layer_name), 'layer_name must be a string');
@@ -76,6 +84,26 @@ classdef Net < handle
       CHECK(ischar(blob_name), 'blob_name must be a string');
       blob = self.blob_vec(self.name2blob_index(blob_name));
     end
+    function bottom_blob_ids = bottom_blob_ids_of(self, layer_name)
+      CHECK(ischar(layer_name), 'layer_name must be a string');
+      layer_index = self.name2layer_index(layer_name);
+      bottom_blob_ids = self.bottom_id_vecs_per_layer{layer_index}+1;
+    end
+    function top_blob_ids = top_blob_ids_of(self, layer_name)
+      CHECK(ischar(layer_name), 'layer_name must be a string');
+      layer_index = self.name2layer_index(layer_name);
+      top_blob_ids = self.top_id_vecs_per_layer{layer_index}+1;
+    end
+    function layer_ids = layer_ids_with_input_blob(self, blob_name)
+      CHECK(ischar(blob_name), 'blob_name must be a string');
+      blob_index = self.name2blob_index(blob_name) - 1;
+      layer_ids = [];
+      for i = 1:length(self.bottom_id_vecs_per_layer)
+        if any(self.bottom_id_vecs_per_layer{i} == blob_index)
+          layer_ids = [layer_ids; i];
+        end
+      end
+    end 
     function blob = params(self, layer_name, blob_index)
       CHECK(ischar(layer_name), 'layer_name must be a string');
       CHECK(isscalar(blob_index), 'blob_index must be a scalar');
@@ -83,6 +111,12 @@ classdef Net < handle
     end
     function forward_prefilled(self)
       caffe_('net_forward', self.hNet_self);
+    end
+    function forward_prefilled_from(self, startLayerIdx)
+      caffe_('net_forward_from', self.hNet_self, startLayerIdx-1);
+    end
+    function forward_prefilled_from_to(self, startLayerIdx, stopLayerIdx)
+      caffe_('net_forward_from_to', self.hNet_self, startLayerIdx-1, stopLayerIdx-1);
     end
     function backward_prefilled(self)
       caffe_('net_backward', self.hNet_self);

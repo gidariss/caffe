@@ -125,6 +125,16 @@ static mxArray* str_vec_to_mx_strcell(const vector<std::string>& str_vec) {
   return mx_strcell;
 }
 
+// Convert vector<vector<int>> to matlab cell vector of row vectors
+static mxArray* vector_of_int_vec_to_cell_of_mx_vec(const vector<vector<int> >& vector_of_int_vec) {
+  mxArray* cell_of_mx_vec = mxCreateCellMatrix(vector_of_int_vec.size(), 1);
+  for (int i = 0; i < vector_of_int_vec.size(); i++) {
+    mxSetCell(cell_of_mx_vec, i, int_vec_to_mx_vec(vector_of_int_vec[i]));
+  }
+  return cell_of_mx_vec;
+}
+
+
 /** -----------------------------------------------------------------
  ** handle and pointer conversion functions
  ** a handle is a struct array with the following fields
@@ -276,9 +286,9 @@ static void net_get_attr(MEX_ARGS) {
   mxCHECK(nrhs == 1 && mxIsStruct(prhs[0]),
       "Usage: caffe_('net_get_attr', hNet)");
   Net<float>* net = handle_to_ptr<Net<float> >(prhs[0]);
-  const int net_attr_num = 6;
+  const int net_attr_num = 8;
   const char* net_attrs[net_attr_num] = { "hLayer_layers", "hBlob_blobs",
-      "input_blob_indices", "output_blob_indices", "layer_names", "blob_names"};
+      "input_blob_indices", "output_blob_indices", "layer_names", "blob_names", "top_id_vecs", "bottom_id_vecs"};
   mxArray* mx_net_attr = mxCreateStructMatrix(1, 1, net_attr_num,
       net_attrs);
   mxSetField(mx_net_attr, 0, "hLayer_layers",
@@ -293,6 +303,10 @@ static void net_get_attr(MEX_ARGS) {
       str_vec_to_mx_strcell(net->layer_names()));
   mxSetField(mx_net_attr, 0, "blob_names",
       str_vec_to_mx_strcell(net->blob_names()));
+  mxSetField(mx_net_attr, 0, "top_id_vecs",
+      vector_of_int_vec_to_cell_of_mx_vec(net->top_id_vecs()));
+  mxSetField(mx_net_attr, 0, "bottom_id_vecs",
+      vector_of_int_vec_to_cell_of_mx_vec(net->bottom_id_vecs()));
   plhs[0] = mx_net_attr;
 }
 
@@ -302,6 +316,25 @@ static void net_forward(MEX_ARGS) {
       "Usage: caffe_('net_forward', hNet)");
   Net<float>* net = handle_to_ptr<Net<float> >(prhs[0]);
   net->ForwardPrefilled();
+}
+
+// Usage: caffe_('net_forward_from', hNet, startLayer)
+static void net_forward_from(MEX_ARGS) {
+  mxCHECK(nrhs == 2 && mxIsStruct(prhs[0]) && mxIsDouble(prhs[1]),
+      "Usage: caffe_('net_forward_from', hNet, startLayer)");
+  Net<float>* net = handle_to_ptr<Net<float> >(prhs[0]);
+  int startLayer = static_cast<int>(mxGetScalar(prhs[1]));
+  net->ForwardFrom(startLayer);
+}
+
+// Usage: caffe_('net_forward_from_to', hNet, startLayer, stopLayer)
+static void net_forward_from_to(MEX_ARGS) {
+  mxCHECK(nrhs == 3 && mxIsStruct(prhs[0]) && mxIsDouble(prhs[1]) && mxIsDouble(prhs[2]),
+      "Usage: caffe_('net_forward_from_to', hNet, startLayer, stopLayer)");
+  Net<float>* net = handle_to_ptr<Net<float> >(prhs[0]);
+  int startLayer  = static_cast<int>(mxGetScalar(prhs[1]));
+  int stopLayer   = static_cast<int>(mxGetScalar(prhs[2]));
+  net->ForwardFromTo(startLayer, stopLayer);
 }
 
 // Usage: caffe_('net_backward', hNet)
@@ -523,6 +556,8 @@ static handler_registry handlers[] = {
   { "get_net",            get_net         },
   { "net_get_attr",       net_get_attr    },
   { "net_forward",        net_forward     },
+  { "net_forward_from",    net_forward_from},
+  { "net_forward_from_to", net_forward_from_to},
   { "net_backward",       net_backward    },
   { "net_copy_from",      net_copy_from   },
   { "net_reshape",        net_reshape     },

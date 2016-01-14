@@ -149,6 +149,15 @@ class Net {
   inline const vector<vector<Blob<Dtype>*> >& top_vecs() const {
     return top_vecs_;
   }
+
+  inline const vector<vector<int> > bottom_id_vecs() const {
+    return bottom_id_vecs_;
+  }
+
+  inline const vector<vector<int> > top_id_vecs() const {
+    return top_id_vecs_;
+  }
+
   /// @brief returns the ids of the top blobs of layer i
   inline const vector<int> & top_ids(int i) const {
     CHECK_GE(i, 0) << "Invalid layer id";
