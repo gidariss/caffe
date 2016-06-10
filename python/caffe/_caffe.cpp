@@ -26,6 +26,19 @@
 #define PyArray_SetBaseObject(arr, x) (PyArray_BASE(arr) = (x))
 #endif
 
+/* Fix to avoid registration warnings in pycaffe (#3960) */
+#define BP_REGISTER_SHARED_PTR_TO_PYTHON(PTR) do { \
+  const boost::python::type_info info = \
+    boost::python::type_id<shared_ptr<PTR > >(); \
+  const boost::python::converter::registration* reg = \
+    boost::python::converter::registry::query(info); \
+  if (reg == NULL) { \
+    bp::register_ptr_to_python<shared_ptr<PTR > >(); \
+  } else if ((*reg).m_to_python == NULL) { \
+    bp::register_ptr_to_python<shared_ptr<PTR > >(); \
+  } \
+} while (0)
+
 namespace bp = boost::python;
 
 namespace caffe {
@@ -99,6 +112,14 @@ void Net_Save(const Net<Dtype>& net, string filename) {
   NetParameter net_param;
   net.ToProto(&net_param, false);
   WriteProtoToBinaryFile(net_param, filename.c_str());
+}
+
+void Net_SaveHDF5(const Net<Dtype>& net, string filename) {
+  net.ToHDF5(filename);
+}
+
+void Net_LoadHDF5(Net<Dtype>* net, string filename) {
+  net->CopyTrainedLayersFromHDF5(filename.c_str());
 }
 
 void Net_SetInputArrays(Net<Dtype>* net, bp::object data_obj,
@@ -212,6 +233,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SolveOverloads, Solve, 0, 1);
 BOOST_PYTHON_MODULE(_caffe) {
   // below, we prepend an underscore to methods that will be replaced
   // in Python
+
+  bp::scope().attr("__version__") = AS_STRING(CAFFE_VERSION);
+
   // Caffe utility functions
   bp::def("set_mode_cpu", &set_mode_cpu);
   bp::def("set_mode_gpu", &set_mode_gpu);
@@ -251,7 +275,10 @@ BOOST_PYTHON_MODULE(_caffe) {
         bp::return_value_policy<bp::copy_const_reference>()))
     .def("_set_input_arrays", &Net_SetInputArrays,
         bp::with_custodian_and_ward<1, 2, bp::with_custodian_and_ward<1, 3> >())
-    .def("save", &Net_Save);
+    .def("save", &Net_Save)
+    .def("save_hdf5", &Net_SaveHDF5)
+    .def("load_hdf5", &Net_LoadHDF5);
+  BP_REGISTER_SHARED_PTR_TO_PYTHON(Net<Dtype>);
 
   bp::class_<Blob<Dtype>, shared_ptr<Blob<Dtype> >, boost::noncopyable>(
     "Blob", bp::no_init)
@@ -271,6 +298,7 @@ BOOST_PYTHON_MODULE(_caffe) {
           NdarrayCallPolicies()))
     .add_property("diff",     bp::make_function(&Blob<Dtype>::mutable_cpu_diff,
           NdarrayCallPolicies()));
+  BP_REGISTER_SHARED_PTR_TO_PYTHON(Blob<Dtype>);
 
   bp::class_<Layer<Dtype>, shared_ptr<PythonLayer<Dtype> >,
     boost::noncopyable>("Layer", bp::init<const LayerParameter&>())
@@ -279,7 +307,7 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def("setup", &Layer<Dtype>::LayerSetUp)
     .def("reshape", &Layer<Dtype>::Reshape)
     .add_property("type", bp::make_function(&Layer<Dtype>::type));
-  bp::register_ptr_to_python<shared_ptr<Layer<Dtype> > >();
+  BP_REGISTER_SHARED_PTR_TO_PYTHON(Layer<Dtype>);
 
   bp::class_<LayerParameter>("LayerParameter", bp::no_init);
 
@@ -294,6 +322,7 @@ BOOST_PYTHON_MODULE(_caffe) {
     .def("step", &Solver<Dtype>::Step)
     .def("restore", &Solver<Dtype>::Restore)
     .def("snapshot", &Solver<Dtype>::Snapshot);
+  BP_REGISTER_SHARED_PTR_TO_PYTHON(Solver<Dtype>);
 
   bp::class_<SGDSolver<Dtype>, bp::bases<Solver<Dtype> >,
     shared_ptr<SGDSolver<Dtype> >, boost::noncopyable>(
