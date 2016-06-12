@@ -104,6 +104,17 @@ classdef Net < handle
         end
       end
     end 
+    function layer_id = layer_id_with_output_blob(self, blob_name)
+      CHECK(ischar(blob_name), 'blob_name must be a string');
+      blob_index = self.name2blob_index(blob_name) - 1;
+      layer_id = [];
+      for i = 1:length(self.top_id_vecs_per_layer)
+        if any(self.top_id_vecs_per_layer{i} == blob_index)
+          layer_id = i;
+          break;
+        end
+      end
+    end
     function blob = params(self, layer_name, blob_index)
       CHECK(ischar(layer_name), 'layer_name must be a string');
       CHECK(isscalar(blob_index), 'blob_index must be a scalar');

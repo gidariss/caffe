@@ -258,7 +258,14 @@ static void solver_step(MEX_ARGS) {
   int iters = mxGetScalar(prhs[1]);
   solver->Step(iters);
 }
-
+// Usage: caffe_('solver_one_step', hSolver, batch_iter)
+static void solver_one_step(MEX_ARGS) {
+  mxCHECK(nrhs == 2 && mxIsStruct(prhs[0]) && mxIsDouble(prhs[1]),
+      "Usage: caffe_('solver_one_step', hSolver, batch_iter)");
+  Solver<float>* solver = handle_to_ptr<Solver<float> >(prhs[0]);
+  const int batch_iter = mxGetScalar(prhs[1]);
+  solver->OneStep(batch_iter);
+}
 // Usage: caffe_('get_net', model_file, phase_name)
 static void get_net(MEX_ARGS) {
   mxCHECK(nrhs == 2 && mxIsChar(prhs[0]) && mxIsChar(prhs[1]),
@@ -514,6 +521,14 @@ static void read_mean(MEX_ARGS) {
   mxFree(mean_proto_file);
 }
 
+// Usage: caffe_('set_random_seed', random_seed)
+static void set_random_seed(MEX_ARGS) {
+	mxCHECK(nrhs == 1 && mxIsDouble(prhs[0]),
+		"Usage: caffe_('set_random_seed', random_seed)");
+	int random_seed = static_cast<unsigned int>(mxGetScalar(prhs[0]));
+	Caffe::set_random_seed(random_seed);
+}
+
 // Usage: caffe_('write_mean', mean_data, mean_proto_file)
 static void write_mean(MEX_ARGS) {
   mxCHECK(nrhs == 2 && mxIsSingle(prhs[0]) && mxIsChar(prhs[1]),
@@ -560,6 +575,7 @@ static handler_registry handlers[] = {
   { "solver_restore",     solver_restore  },
   { "solver_solve",       solver_solve    },
   { "solver_step",        solver_step     },
+  { "solver_one_step",    solver_one_step },
   { "get_net",            get_net         },
   { "net_get_attr",       net_get_attr    },
   { "net_forward",        net_forward     },
@@ -580,6 +596,7 @@ static handler_registry handlers[] = {
   { "set_mode_cpu",       set_mode_cpu    },
   { "set_mode_gpu",       set_mode_gpu    },
   { "set_device",         set_device      },
+  { "set_random_seed",    set_random_seed },
   { "get_init_key",       get_init_key    },
   { "reset",              reset           },
   { "read_mean",          read_mean       },

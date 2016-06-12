@@ -987,6 +987,8 @@ message RegionPoolingParameter {
   // input scale to the scale used when pooling
   optional float spatial_scale = 3 [default = 1];
   optional float offset = 4 [default = 6];
+  // Only used in the case of the RegionWarping layer if the gradients w.r.t. the input region are needed
+  optional bool force_region_grads = 5 [default = false];
 }
 
 // Message that stores parameters used by ReLULayer
